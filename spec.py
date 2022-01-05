@@ -1,12 +1,9 @@
 import numpy as np
 import matplotlib.pyplot as plt
 import csv
-#  from scipy.signal import find_peaks
 
-plt.rc('text.latex', preamble=r'\usepackage{amsmath}')
-
-# reduced Planck unit
-m_pl = 2.44e18
+# import global variables
+from . import fStar, omegaStar, L, N, phi0, m_eff_min
 
 
 def convert_line_2_floats(s):
@@ -15,204 +12,6 @@ def convert_line_2_floats(s):
     """
     floats = [float(value) for value in s.split(' ')]
     return floats
-
-
-def read_para(fn):
-    """
-    Read parameter files, src/model/parameter-files/'fn'.
-    Only need these parameters now.
-    """
-    with open(fn) as f:
-        for line in f:
-            line = line.partition('#')[0]
-            line = line.rstrip()
-            if line.startswith('initial_amplitudes = '):
-                init_amp = float(line.replace("initial_amplitudes = ", ''))
-            elif line.startswith('d = '):
-                d = float(line.replace("d = ", ''))
-            elif line.startswith('kIR = '):
-                kIR = float(line.replace('kIR = ', ''))
-                L = 2*np.pi/kIR
-            elif line.startswith('lSide = '):
-                L = float(line.replace('lSide = ', ''))
-            elif line.startswith('N = '):
-                N = int(line.replace('N = ', ''))
-            elif line.startswith('kCutOff = '):
-                kCutOff = float(line.replace('kCutOff = ', ''))
-            elif line.startswith('phi0 = '):
-                phi0 = float(line.replace('phi0 = ', ''))
-    # all in reduced Planck
-    fStar = init_amp/m_pl
-    omegaStar = np.sqrt(d)/3*phi0/m_pl
-    L /= omegaStar
-    kCutOff *= omegaStar
-    phi0 /= m_pl
-    parameters = {
-        "f*": fStar,
-        "omega*": omegaStar,
-        "L": L,
-        "N": N,
-        "kCutOff": kCutOff,
-        "phi0": phi0
-    }
-    print("Lattice parameters (all in m_pl):")
-    print(parameters)
-    return parameters
-
-
-#  def get_hubble_inf(phi0):
-    #  '''
-    #  return the scale of inflation in SFPI model fitted with Planck
-    #  '''
-    #  H = 8.6e-9 * phi0**3  # m_pl
-    #  return H
-
-
-def initialize(parameter_fn):
-    """
-    Read lattice parameters from parameter_fn and save global variables
-    """
-    para_dict = read_para("./sfpi.in")
-    global fStar, omegaStar, L, N, phi0, H0, m_eff_min
-    fStar = para_dict["f*"]
-    omegaStar = para_dict["omega*"]
-    L = para_dict["L"]
-    N = para_dict['N']
-    phi0 = para_dict['phi0']
-    #  H0 = get_hubble_inf(phi0)
-    m_eff_min = 2.97e-8 * phi0**2  # in m_pl
-
-    delta_x = L/N
-    k_UV = np.sqrt(3)*np.pi/delta_x
-    k_IR = 2*np.pi/L
-    print("Momentum cutoffs are: k_IR = %e m_pl, k_UV = %e m_pl"
-          % (k_IR, k_UV))
-    kCutOff = para_dict["kCutOff"]
-    print("Initializing momenta (UV) cutoff is: kCutoff = %e m_pl"
-          % (kCutOff))
-    print("")
-
-
-def read_average_scalar():
-    """
-    Read average field values and etc
-    """
-    data = np.genfromtxt("./average_scalar_0.txt").T
-    # keep everything in program units
-    #  data[1] *= fStar
-    #  data[2] *= fStar * omegaStar
-    #  data[3] *= fStar**2
-    #  data[4] *= (fStar * omegaStar)**2
-    #  data[5] *= fStar
-    #  data[6] *= fStar * omegaStar
-    return data
-
-
-def plot_mean_fld(data):
-    """
-    Plot volume averaged field value
-    """
-    print("Plotting mean field value...")
-
-    t = data[0]
-    #  mean_fld = data[1] / phi0
-    mean_fld = data[1]
-    plt.plot(t, mean_fld)
-    t0_array = np.array([t[0], t[-1]])
-    #  plt.plot(t0_array, [1/3, 1/3], color="grey", linestyle="--", label="tachyonic")
-
-    plt.fill_between(t0_array, 1/3, 1, color="lightgrey", label="tachyonic")
-
-    plt.ylabel(r"$\langle \phi \rangle /\phi_0$")
-    plt.legend()
-    plt.xlabel(r"$t \cdot \omega_*$")
-    plt.xlim((t[0], t[-1]))
-    plt.savefig("mean_field.pdf", bbox_inches="tight")
-    plt.close()
-
-
-def plot_rms(data):
-    """
-    Plot rms of inflaton field, i.e. sqrt(<phi^2> - <phi>^2)
-    """
-    print("Plotting field rms...")
-    t = data[0]
-    rms_fld = data[5]
-    #  mask = (t > 0)  # only plot the interesting part
-    #  plt.plot(t[mask], rms_fld[mask], label=r"$\sqrt{<\phi^2>}$")
-    plt.plot(t, rms_fld)
-    #  plt.legend()
-    plt.xlabel(r"$t \cdot \omega_*$")
-    plt.ylabel(r"$\sqrt{\langle \phi^2 \rangle - \langle \phi \rangle^2}/\phi_0$")
-    plt.savefig("rms.pdf", bbox_inches="tight")
-    plt.close()
-
-    rms_fld_vlc = data[6]
-    plt.plot(t, rms_fld_vlc)
-    plt.xlabel(r"$t \cdot \omega_*$")
-    plt.ylabel(r"$\sqrt{\langle \phi'^2 \rangle - \langle \phi' \rangle^2}/\phi_0/omega_*$")
-    plt.savefig("rms_vlc.pdf", bbox_inches="tight")
-    plt.close()
-
-
-def plot_phi2(data):
-    """
-    Plot two types of phi^2
-    """
-    print("Plotting phi^2...")
-    t = data[0]
-    mean_fld = data[1]
-    mean_fld2 = data[3]
-    plt.plot(t, mean_fld2, label=r"$<\phi^2>$")
-    plt.plot(t, mean_fld**2, label=r"$<\phi>^2$", color="black", linestyle=":")
-    plt.legend()
-    plt.xlabel(r"$t \cdot \omega_*$")
-    plt.ylabel(r"$\phi^2/\phi_0^2$")
-    plt.savefig("phi2.pdf", bbox_inches="tight")
-    plt.close()
-
-
-def plot_fld_vel(data):
-    """
-    Plot field velocity, i.e. phi'
-    """
-    print("Plotting field velocities...")
-    t = data[0]
-    mean_vel = data[2]
-    plt.plot(t, mean_vel)
-    plt.xlabel(r"$t \cdot \omega_*$")
-    plt.ylabel(r"$\langle \dot{\phi} \rangle /(\phi_0 \omega_*)$")
-    plt.savefig("phi_dot.pdf", bbox_inches="tight")
-    plt.close()
-
-
-def read_scale():
-    """
-    Read data for scale factors
-    """
-    print("Reading scale factors...")
-    data = np.genfromtxt("./average_scale_factor.txt").T
-    # keep everything in program units
-    #  data[0] *= 1/omegaStar * H0
-    #  data[2] *= omegaStar
-    #  data[3] *= omegaStar
-    return data
-
-
-def plot_scale(data):
-    """
-    Plot scale factor against time
-    """
-    print("Plotting scale factors...")
-    t = data[0]
-    scale_fact = data[1]
-    plt.plot(t, scale_fact)
-    plt.yscale("log")
-    #  plt.legend()
-    plt.ylabel(r"$a$")
-    plt.xlabel(r"$t \cdot \omega_*$")
-    plt.savefig("scale_factor.pdf", bbox_inches="tight")
-    plt.close()
 
 
 def parse_spec(file_name):
@@ -518,84 +317,6 @@ def plot_total_n(spec_times, spectra):
     plt.close()
 
 
-def read_energies():
-    data = np.genfromtxt("./average_energies.txt").T
-    # keep everything in program units
-    #  data[0] *= 1/omegaStar * H0
-    #  data[1:] *= (fStar*omegaStar)**2
-    return data
-
-
-def get_w(data):
-    """
-    Calculate equation of state parameter omega from energy array;
-    a single scalar field, three term in potential
-    """
-    t = data[0]
-    K = data[1]
-    G = data[2]
-    V_tot = data[3] + data[4] + data[5]
-    rho_tot = data[6]
-    p_tot = K - G/3 - V_tot
-    # no need to convert unit, cancelled anyway
-    w = p_tot/rho_tot
-
-    return t, w
-
-
-def plot_w(energy_array):
-    """
-    Plot equation of state parameter omega
-    """
-    t, w = get_w(energy_array)
-    fig, ax = plt.subplots()
-    ax.plot(t, w)
-    ax.set_ylabel(r"$\omega$")
-    ax.set_xlabel(r"$t \cdot \omega_*$")
-    plt.savefig("EOS-w.pdf", bbox_inches="tight")
-    plt.close()
-
-
-def draw_energies(energy_array, scale_fact):
-    """
-    Draw different comoving energies: V, G, K
-    """
-    if energy_array[0].shape[0] != scale_fact[0].shape[0]:
-        print("ERROR in draw_energies()!")
-        return ValueError
-    t = energy_array[0]
-    rho = energy_array[-1]
-    G = energy_array[2]
-    K = energy_array[1]
-    V = (energy_array[3]+energy_array[4]+energy_array[5])
-    # convert to per comoving volume
-    a = scale_fact[1]
-    com_G = G * a**3
-    com_rho = rho * a**3
-    com_K = K * a**3
-    com_V = V * a**3
-
-    fig, ax = plt.subplots()
-    ax.plot(t, com_rho, label=r"$\rho_{tot}$")
-    ax.plot(t, com_G, label=r"$\rho_G$")
-    ax.plot(t, com_K, label=r"$\rho_K$")
-    ax.plot(t, com_V, label=r"$\rho_V$")
-
-    return fig, ax
-
-
-def plot_energies(energy_array, scale_fact):
-    """
-    Plot different comoving energies: V, G, K
-    """
-    fig, ax = draw_energies(energy_array, scale_fact)
-    ax.set_xlabel(r"$t \cdot \omega_*$")
-    ax.set_ylabel(r"$\rho_i a^3 / (\phi_0^2 \omega_*^2)$")
-    ax.legend()
-    plt.savefig("comoving_energies.pdf", bbox_inches="tight")
-    plt.close()
-
-
 def plot_P_delta(spec_times, spectra, energy_array,
                  range=None, k_range=None, scale=None, suffix=None):
     """
@@ -640,8 +361,8 @@ def plot_P_delta(spec_times, spectra, energy_array,
 
                 P_delta_array[t_ind] = P_delta
 
-    fig, ax = draw_spectra(k_array*omegaStar/m_eff_min, P_delta_array, spec_times,
-                           range=range, k_range=k_range)
+    fig, ax = draw_spectra(k_array*omegaStar/m_eff_min, P_delta_array,
+                           spec_times, range=range, k_range=k_range)
     ax.set_xlabel(r"(com.) $k/|m_{\mathrm{eff, min}}|$")
     ax.set_ylabel(r"$P_{\delta}$")
     if scale is not None:
