@@ -2,8 +2,10 @@ import numpy as np
 import matplotlib.pyplot as plt
 import csv
 
+plt.rc('text.latex', preamble=r'\usepackage{amsmath}')
+
 # import global variables
-from . import fStar, omegaStar, L, N, phi0, m_eff_min
+#  from . import fStar, omegaStar, L, N, phi0, m_eff_min
 
 
 def convert_line_2_floats(s):
@@ -117,10 +119,10 @@ def draw_spectra(k, spec, spec_t, range=None, k_range=None):
     return fig, ax
 
 
-def plot_fluc_spec(spec_times, spectra, spec_range=None, k_range=None,
+def plot_fluc_spec(spec_times, spectra, para, spec_range=None, k_range=None,
                    suffix=None, label=None):
     print("Plotting field fluctuation spectra...")
-    k = spectra[:, :, 0] / m_eff_min
+    k = spectra[:, :, 0] * para.omegaStar / para.m_eff_min
     fluc_spec = spectra[:, :,1]
     fig, ax = draw_spectra(k, fluc_spec, spec_times,
                            range=spec_range, k_range=k_range)
@@ -201,11 +203,11 @@ def find_max_P_k(k, spec, spec_t):
     return max_array
 
 
-def plot_max_P_k(spectra, spec_times, average_scalar):
+def plot_max_P_k(spectra, spec_times, average_scalar, para):
     """
     Plot peak value of spectrum at different times
     """
-    k = spectra[:, :, 0] / m_eff_min
+    k = spectra[:, :, 0] / para.m_eff_min
     fluc_spec = spectra[:, :, 1]
 
     max_array = find_max_P_k(k, fluc_spec, spec_times).T
@@ -223,7 +225,7 @@ def plot_max_P_k(spectra, spec_times, average_scalar):
     ax.set_xlim((0.5, 2))
 
     ax2 = ax.twinx()
-    ax2.plot(average_scalar[0], average_scalar[1]/phi0,
+    ax2.plot(average_scalar[0], average_scalar[1]/para.phi0,
              linestyle="--", color="black")
     ax2.tick_params(axis="y", labelcolor="black")
     #  ax2.set_ylim(())
@@ -240,12 +242,12 @@ def plot_max_P_k(spectra, spec_times, average_scalar):
     plt.close()
 
 
-def plot_n_k(spec_times, spectra, spec_range=None, k_range=None):
+def plot_n_k(spec_times, spectra, para, spec_range=None, k_range=None):
     """
     Plot occupation number of produced particles; keep lattice unit of n_k
     """
     print("Plotting occupation number...")
-    k = spectra[:, :, 0] / m_eff_min
+    k = spectra[:, :, 0] / para.m_eff_min
     n_spec = spectra[:, :, 3]
     fig, ax = draw_spectra(k, n_spec, spec_times,
                            range=spec_range, k_range=k_range)
@@ -260,12 +262,12 @@ def plot_n_k(spec_times, spectra, spec_range=None, k_range=None):
     plt.close()
 
 
-def plot_rho_k(spec_times, spectra, spec_range=None, k_range=None):
+def plot_rho_k(spec_times, spectra, para, spec_range=None, k_range=None):
     """
     Plot Fourier transformed energy perturbations
     """
     print("Plotting energy density fluctuations...")
-    k = spectra[:, :, 0] / m_eff_min
+    k = spectra[:, :, 0] * para.omegaStar / para.m_eff_min
     rho_spec = spectra[:, :,4]
     fig, ax = draw_spectra(k, rho_spec, spec_times,
                            range=spec_range, k_range=k_range)
@@ -317,19 +319,22 @@ def plot_total_n(spec_times, spectra):
     plt.close()
 
 
-def plot_P_delta(spec_times, spectra, energy_array,
+def plot_P_delta(spec_times, spectra, energy_array, para,
                  range=None, k_range=None, scale=None, suffix=None):
     """
     Plot power spectrum of density contrast
     """
     # TODO: something is wrong here...
     print("Plotting P_delta...")
-    pre_fact = 1/(2*np.pi**2)/L**3 / N**12  # appears in formula for \delta_k
-    pre_fact *= omegaStar / fStar**4  # appears for different units of rho_k and average_rho
+
+    # appears in formula for \delta_k
+    pre_fact = 1 / (2*np.pi**2)/para.L**3 / para.N**12
+    # appears for different units of rho_k and average_rho
+    pre_fact *= 1 / (para.omegaStar**2 * para.fStar**4)
     #  fig, ax = plt.subplots()
 
     if spec_times.shape[0] == energy_array[0].shape[0]:
-        k_array = spectra[:, :, 0]
+        k_array = spectra[:, :, 0] * para.omegaStar
         P_delta_array = np.zeros(k_array.shape)
         for t_ind, t in enumerate(spec_times):
             # calculate P_delta
@@ -342,7 +347,7 @@ def plot_P_delta(spec_times, spectra, energy_array,
             P_delta_array[t_ind] = P_delta
     else:
         # frequencies for energies and spectra are different
-        k_array = spectra[:, :, 0]
+        k_array = spectra[:, :, 0] * para.omegaStar
         P_delta_array = np.zeros(k_array.shape)
         t_aver_energy = energy_array[0]
         for t_ind, t in enumerate(spec_times):
@@ -360,8 +365,8 @@ def plot_P_delta(spec_times, spectra, energy_array,
                 P_delta = pre_fact * k**3 * (rho_k/aver_rho)**2
 
                 P_delta_array[t_ind] = P_delta
-
-    fig, ax = draw_spectra(k_array*omegaStar/m_eff_min, P_delta_array,
+    # k_array already in planck units
+    fig, ax = draw_spectra(k_array/para.m_eff_min, P_delta_array,
                            spec_times, range=range, k_range=k_range)
     ax.set_xlabel(r"(com.) $k/|m_{\mathrm{eff, min}}|$")
     ax.set_ylabel(r"$P_{\delta}$")

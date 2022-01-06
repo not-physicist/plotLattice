@@ -1,6 +1,8 @@
 import numpy as np
 import matplotlib.pyplot as plt
 
+plt.rc('text.latex', preamble=r'\usepackage{amsmath}')
+
 
 def read_average_scalar():
     """
