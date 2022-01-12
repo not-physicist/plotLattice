@@ -81,7 +81,7 @@ def give_gradual_rgb(x):
         return TypeError
 
 
-def draw_spectra(k, spec, spec_t, range=None, k_range=None):
+def draw_spectra(k, spec, spec_t, spec_range=None, k_range=None):
     """
     Draw spectra (one column from spectra.txt file)
     at different times in different colors.
@@ -92,8 +92,8 @@ def draw_spectra(k, spec, spec_t, range=None, k_range=None):
     Return
         matplotlib Axes, ready to plot
     """
-    if range is not None:  # if range for t is defined
-        time_mask = (spec_t > range[0]) & (spec_t < range[1])
+    if spec_range is not None:  # if range for t is defined
+        time_mask = (spec_t > spec_range[0]) & (spec_t < spec_range[1])
         spec = spec[time_mask]
         spec_t = spec_t[time_mask]
 
@@ -123,17 +123,40 @@ def plot_fluc_spec(spec_times, spectra, para, spec_range=None, k_range=None,
                    suffix=None, label=None):
     print("Plotting field fluctuation spectra...")
     k = spectra[:, :, 0] * para.omegaStar / para.m_eff_min
-    fluc_spec = spectra[:, :,1]
+    fluc_spec = spectra[:, :, 1]
     fig, ax = draw_spectra(k, fluc_spec, spec_times,
-                           range=spec_range, k_range=k_range)
+                           spec_range=spec_range, k_range=k_range)
     ax.plot([], [], label=label)
     ax.set_xlabel(r"(com.) $k/|m_{\mathrm{eff, min}}|$")
-    ax.set_ylabel(r"$P_{{\phi}}/\phi_0^2$")
+    ax.set_ylabel(r"$P_{{\phi}}/f_*^2$")
     #  ax.set_yscale('log')
     ax.legend()
 
-    plot_fn = "P_k_color"
-    if k_range is not None or range is not None:
+    plot_fn = "P_phi"
+    if k_range is not None or spec_range is not None:
+        plot_fn += "_zoomed_in"
+    if suffix is not None:
+        plot_fn += suffix
+    plot_fn += ".pdf"
+    plt.savefig(plot_fn, bbox_inches="tight")
+    plt.close()
+
+
+def plot_fluc_vel_spec(spec_times, spectra, para, spec_range=None,
+                       k_range=None, suffix=None, label=None):
+    print("Plotting field velocity fluctuation spectra...")
+    k = spectra[:, :, 0] * para.omegaStar / para.m_eff_min
+    fluc_spec = spectra[:, :, 2]
+    fig, ax = draw_spectra(k, fluc_spec, spec_times,
+                           spec_range=spec_range, k_range=k_range)
+    ax.plot([], [], label=label)
+    ax.set_xlabel(r"(com.) $k/|m_{\mathrm{eff, min}}|$")
+    ax.set_ylabel(r"$P_{{\phi'}}/f_*^2 \omega_*^2$")
+    #  ax.set_yscale('log')
+    ax.legend()
+
+    plot_fn = "P_phi_vel"
+    if k_range is not None or spec_range is not None:
         plot_fn += "_zoomed_in"
     if suffix is not None:
         plot_fn += suffix
@@ -250,7 +273,7 @@ def plot_n_k(spec_times, spectra, para, spec_range=None, k_range=None):
     k = spectra[:, :, 0] / para.m_eff_min
     n_spec = spectra[:, :, 3]
     fig, ax = draw_spectra(k, n_spec, spec_times,
-                           range=spec_range, k_range=k_range)
+                           spec_range=spec_range, k_range=k_range)
     ax.set_ylabel(r"$\tilde{n}_{\tilde{k}}$")
     ax.set_xlabel(r"(com.) $k/|m_{\mathrm{eff, min}}|$")
     #  ax2.set_yscale("log")
@@ -270,7 +293,7 @@ def plot_rho_k(spec_times, spectra, para, spec_range=None, k_range=None):
     k = spectra[:, :, 0] * para.omegaStar / para.m_eff_min
     rho_spec = spectra[:, :,4]
     fig, ax = draw_spectra(k, rho_spec, spec_times,
-                           range=spec_range, k_range=k_range)
+                           spec_range=spec_range, k_range=k_range)
     ax.set_ylabel(r"$\delta \tilde{\rho}_{\tilde k}$")
     ax.set_xlabel(r"(com.) $k/|m_{\mathrm{eff, min}}|$")
     #  ax2.set_yscale("log")
@@ -320,7 +343,7 @@ def plot_total_n(spec_times, spectra):
 
 
 def plot_P_delta(spec_times, spectra, energy_array, para,
-                 range=None, k_range=None, scale=None, suffix=None):
+                 spec_range=None, k_range=None, scale=None, suffix=None):
     """
     Plot power spectrum of density contrast
     """
@@ -367,14 +390,14 @@ def plot_P_delta(spec_times, spectra, energy_array, para,
                 P_delta_array[t_ind] = P_delta
     # k_array already in planck units
     fig, ax = draw_spectra(k_array/para.m_eff_min, P_delta_array,
-                           spec_times, range=range, k_range=k_range)
+                           spec_times, spec_range=spec_range, k_range=k_range)
     ax.set_xlabel(r"(com.) $k/|m_{\mathrm{eff, min}}|$")
     ax.set_ylabel(r"$P_{\delta}$")
     if scale is not None:
         ax.set_yscale(scale)
     plt.legend()
     plot_fn = "P_delta"
-    if k_range is not None or range is not None:
+    if k_range is not None or spec_range is not None:
         plot_fn += "_zoomed_in"
     if suffix is not None:
         plot_fn += suffix

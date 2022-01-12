@@ -19,7 +19,7 @@ def read_average_scalar():
     return data
 
 
-def plot_mean_fld(data):
+def plot_mean_fld(data, t_range=None):
     """
     Plot volume averaged field value
     """
@@ -37,8 +37,13 @@ def plot_mean_fld(data):
     plt.ylabel(r"$\langle \phi \rangle /\phi_0$")
     plt.legend()
     plt.xlabel(r"$t \cdot \omega_*$")
-    plt.xlim((t[0], t[-1]))
-    plt.savefig("mean_field.pdf", bbox_inches="tight")
+    fn = "mean_field"
+    if t_range is None:
+        plt.xlim((t[0], t[-1]))
+    else:
+        plt.xlim(t_range)
+        fn += "_zoomed_in"
+    plt.savefig(fn + ".pdf", bbox_inches="tight")
     plt.close()
 
 
